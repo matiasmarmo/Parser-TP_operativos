@@ -7,19 +7,16 @@
 #include "parser.h"
 #include "protocol.h"
 
-int parser(char* msg,char* buffer, int max){
-	if(strlen(msg) > max){
-		return ERROR_TAMANIO_BUFFER;
-	}
-	if(!memcmp(msg,"SELECT ",7      )){ return ejecutarSelect(msg,buffer);}
-	if(!memcmp(msg,"INSERT ",7      )){ return ejecutarInsert(msg,buffer);}
-	if(!memcmp(msg,"CREATE ",7      )){ return ejecutarCreate(msg,buffer);}
-	if(!memcmp(msg,"DESCRIBE",8     )){ return ejecutarDescribe(msg,buffer);}
-	if(!memcmp(msg,"DROP ",5        )){ return ejecutarDrop(msg,buffer);}
-	if(!strcmp(msg,"JOURNAL"        )){ return ejecutarJournal(msg,buffer);}
-	if(!memcmp(msg,"ADD MEMORY ",11 )){ return ejecutarAdd(msg,buffer);}
-	if(!strcmp(msg,"METRICS"        )){ return METRICS;}
-	if(!strcmp(msg,"EXIT"           )){ return EXIT;}
+int parser(char* linea,void* msg, int tamanioBuffer){
+	if(!memcmp(linea,"SELECT ",7      )){ return ejecutarSelect(linea,msg,tamanioBuffer);}
+	if(!memcmp(linea,"INSERT ",7      )){ return ejecutarInsert(linea,msg,tamanioBuffer);}
+	if(!memcmp(linea,"CREATE ",7      )){ return ejecutarCreate(linea,msg,tamanioBuffer);}
+	if(!memcmp(linea,"DESCRIBE",8     )){ return ejecutarDescribe(linea,msg,tamanioBuffer);}
+	if(!memcmp(linea,"DROP ",5        )){ return ejecutarDrop(linea,msg,tamanioBuffer);}
+	if(!strcmp(linea,"JOURNAL"        )){ return ejecutarJournal(linea,msg,tamanioBuffer);}
+	if(!memcmp(linea,"ADD MEMORY ",11 )){ return ejecutarAdd(linea,msg,tamanioBuffer);}
+	if(!strcmp(linea,"METRICS"        )){ return ejecutarMetrics(msg,tamanioBuffer);}
+	if(!strcmp(linea,"EXIT"           )){ return ejecutarExit(msg,tamanioBuffer);}
 	return ERROR;
 }
 
@@ -37,7 +34,7 @@ int obtenerProximaPalabra(char* msg, char* buff,char centinela,int inicio){
 	return contador-inicio;
 }
 
-int ejecutarSelect(char* msg,char* buffer){
+int ejecutarSelect(char* msg,char* buffer, int tamanioBuffer){
 	//SELECT + NOMBRE_TABLA + KEY
 	int inicio = 7;
 	char nombreTabla[MAX_TOKENS_LENGTH];
@@ -54,11 +51,12 @@ int ejecutarSelect(char* msg,char* buffer){
 
 	struct select_request mensaje;
 	init_select_request(nombreTabla,nuevaKey,&mensaje);
+	if(sizeof(struct select_request) > tamanioBuffer){ return ERROR_TAMANIO_BUFFER; }
 	memcpy(buffer, &mensaje, sizeof(struct select_request));
 	return OK;
 }
 
-int ejecutarInsert(char* msg,char* buffer){
+int ejecutarInsert(char* msg,char* buffer, int tamanioBuffer){
 	//INSERT + NOMBRE_TABLA + KEY + "VALUE" + TIMESTAMP
 	int inicio = 7;
 	char nombreTabla[MAX_TOKENS_LENGTH];
@@ -96,10 +94,11 @@ int ejecutarInsert(char* msg,char* buffer){
 
 	struct insert_request mensaje;
 	init_insert_request(nombreTabla,nuevaKey,value,nuevoTimestamp,&mensaje);
+	if(sizeof(struct insert_request) > tamanioBuffer){ return ERROR_TAMANIO_BUFFER; }
 	memcpy(buffer, &mensaje, sizeof(struct insert_request));
 	return OK;
 }
-int ejecutarCreate(char* msg,char* buffer){
+int ejecutarCreate(char* msg,char* buffer, int tamanioBuffer){
 	//CREATE + NOMBRE_TABLA + TIPO CONSISTENCIA + NUMERO PARTICIONES + TIEMPO DE COMPACTACION
 	int inicio = 7;
 	char nombreTabla[MAX_TOKENS_LENGTH];
@@ -131,11 +130,12 @@ int ejecutarCreate(char* msg,char* buffer){
 
 	struct create_request mensaje;
 	init_create_request(nombreTabla,valorConsistencia,nuevaParticion,nuevaCompactacion,&mensaje);
+	if(sizeof(struct create_request) > tamanioBuffer){ return ERROR_TAMANIO_BUFFER; }
 	memcpy(buffer, &mensaje, sizeof(struct create_request));
 	return OK;
 }
 
-int ejecutarDescribe(char* msg,char* buffer){
+int ejecutarDescribe(char* msg,char* buffer, int tamanioBuffer){
 	//DESCRIBE + NOMBRE_TABLA o DESCRIBE
 	int inicio = 8;
 	char nombreTabla[MAX_TOKENS_LENGTH];
@@ -152,11 +152,12 @@ int ejecutarDescribe(char* msg,char* buffer){
 
 	struct describe_request mensaje;
 	init_describe_request(1,nombreTabla,&mensaje);
+	if(sizeof(struct describe_request) > tamanioBuffer){ return ERROR_TAMANIO_BUFFER; }
 	memcpy(buffer, &mensaje, sizeof(struct describe_request));
 	return OK;
 }
 
-int ejecutarDrop(char* msg,char* buffer){
+int ejecutarDrop(char* msg,char* buffer, int tamanioBuffer){
 	//DROP + NOMBRE_TABLA
 	int inicio = 6;
 	char nombreTabla[MAX_TOKENS_LENGTH];
@@ -167,19 +168,21 @@ int ejecutarDrop(char* msg,char* buffer){
 
 	struct drop_request mensaje;
 	init_drop_request(nombreTabla,&mensaje);
+	if(sizeof(struct drop_request) > tamanioBuffer){ return ERROR_TAMANIO_BUFFER; }
 	memcpy(buffer, &mensaje, sizeof(struct drop_request));
 	return OK;
 }
 
-int ejecutarJournal(char* msg,char* buffer){
+int ejecutarJournal(char* msg,char* buffer, int tamanioBuffer){
 	//JOURNAL
 	struct journal_request mensaje;
 	init_journal_request(&mensaje);
+	if(sizeof(struct journal_request) > tamanioBuffer){ return ERROR_TAMANIO_BUFFER; }
 	memcpy(buffer, &mensaje, sizeof(struct journal_request));
 	return OK;
 }
 
-int ejecutarAdd(char* msg,char* buffer){
+int ejecutarAdd(char* msg,char* buffer, int tamanioBuffer){
 	//ADD MEMORY + NUMERO + TO + CRITERIO
 	int inicio = 11;
 	char numero[MAX_TOKENS_LENGTH];
@@ -204,14 +207,31 @@ int ejecutarAdd(char* msg,char* buffer){
 
 	struct add_request mensaje;
 	init_add_request(nuevoNumero,valorConsistencia,&mensaje);
+	if(sizeof(struct add_request) > tamanioBuffer){ return ERROR_TAMANIO_BUFFER; }
 	memcpy(buffer, &mensaje, sizeof(struct add_request));
+	return OK;
+}
+
+int ejecutarMetrics(char* buffer, int tamanioBuffer){
+	struct metrics_request mensaje;
+	init_metrics_request(&mensaje);
+	if(sizeof(struct metrics_request) > tamanioBuffer){ return ERROR_TAMANIO_BUFFER; }
+	memcpy(buffer, &mensaje, sizeof(struct metrics_request));
+	return OK;
+}
+
+int ejecutarExit(char* buffer, int tamanioBuffer){
+	struct exit_request mensaje;
+	init_exit_request(&mensaje);
+	if(sizeof(struct exit_request) > tamanioBuffer){ return ERROR_TAMANIO_BUFFER; }
+	memcpy(buffer, &mensaje, sizeof(struct exit_request));
 	return OK;
 }
 
 int isIdentifier(char* id){ //Controla que id este conformado solo por letras , '_' o '-'
 	for(int i=0 ; i < strlen(id); i++){
 		if(!( isalnum(id[i]) || id[i]=='_' || id[i]=='-')){
-			return ERROR;
+			return FALSE;
 		}
 	}
 	return OK;
@@ -219,7 +239,7 @@ int isIdentifier(char* id){ //Controla que id este conformado solo por letras , 
 int isConstant(char* id){ //Controla que id este conformado solo por numeros
 	for(int i=0 ; i < strlen(id); i++){
 		if(!isdigit(id[i])){
-			return ERROR;
+			return FALSE;
 		}
 	}
 	return OK;
@@ -234,8 +254,9 @@ int isConsistency(char* id){ //Controla que id haga match con alguna de las 3 co
 	}
 	return -1;
 }
-void manejarError(int error, char* buff){
-	char mensaje[100] = "Estimado colega, ha cometido un error ";
+int manejarError(int error, char* buff,int tamanio){
+	if(tamanio < 150){ return ERROR; }
+	char mensaje[100] = "Ha cometido un error ";
 	switch(error){
 		case VALUE_INVALIDO:
 			strcat(mensaje,"al ingresar un valor invalido");
@@ -258,6 +279,7 @@ void manejarError(int error, char* buff){
 			break;
 	}
 	memcpy(buff, &mensaje, sizeof(mensaje));
+	return 0;
 }
 // ----------PARA PRUEBAS------------
 /*

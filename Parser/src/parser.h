@@ -3,20 +3,20 @@
 
 #define MAX_TOKENS_LENGTH    100
 
-enum errores{ VALUE_INVALIDO = -6,
+enum errores{ VALUE_INVALIDO = -7,
 			  CONSISTENCIA_INVALIDA,
 	          ERROR_TAMANIO_BUFFER,
 			  IDENTIFICADOR_INVALIDO,
 			  CONSTANTE_INVALIDA,
 			  COMANDOS_INVALIDOS,
 			  ERROR,
-			  OK,
-			  EXIT,
-			  METRICS
+			  FALSE,
+			  OK
 };
 
-int parser(char*,char*,int);
-int isIdentifier(char* );
+int parser(char*,void*,int);
+void manejarError(int, char*,int);
+/*int isIdentifier(char* );
 int isConstant(char* );
 int isConsistency(char* );
 int obtenerProximaPalabra(char* , char* ,char ,int );
@@ -26,8 +26,7 @@ int ejecutarCreate(char*,char*);
 int ejecutarDescribe(char*,char*);
 int ejecutarDrop(char*,char*);
 int ejecutarJournal(char*,char*);
-int ejecutarAdd(char*,char*);
-void manejarError(int, char*);
+int ejecutarAdd(char*,char*);*/
 //-----------PARA PRUEBAS----------
 /*void casosDeUso(void);
 
